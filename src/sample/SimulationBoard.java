@@ -103,8 +103,10 @@ public class SimulationBoard {
             EventHandler<? super javafx.scene.input.MouseEvent> oldHandler = totalChart.getOnMouseClicked();
 
             totalChart.setOnMouseClicked( event-> {
-                Stage saveStage = prepareSaveStage();
-                saveStage.show();
+                if(!running) {
+                    Stage saveStage = prepareSaveStage();
+                    saveStage.show();
+                }
             });
             newRoot.getChildren().add(totalChart);
             stage.setScene(new Scene(newRoot));
@@ -116,6 +118,7 @@ public class SimulationBoard {
                 totalChart.setMaxHeight(300);
                 totalChart.setMaxWidth(400);
                 controlPanel.getChildren().add(totalChart);
+                totalChart.setOnMouseClicked(oldHandler);
                 stage.close();
             });
             stage.show();
@@ -130,10 +133,11 @@ public class SimulationBoard {
         Stage saveStage = new Stage();
         saveStage.setTitle("Save to png");
         VBox vBox = new VBox();
+        vBox.setAlignment(Pos.CENTER);
+        vBox.setMinHeight(300);
+        vBox.setMinWidth(400);
         vBox.setPadding(new Insets(5, 5, 5, 5));
         vBox.setSpacing(10);
-
-
         Text text = new Text();
         text.setText("Enter a filename (saves to Png)");
         vBox.getChildren().add(text);
@@ -241,6 +245,9 @@ public class SimulationBoard {
         ( (Text) controlPanel.getChildren().get(10)).setText("Chances of rabbit bearing an offspring (double)");
         ( (TextField) controlPanel.getChildren().get(11)).setPromptText("Chances of rabbit bearing an offspring (double)");
 
+        HBox buttons = new HBox();
+        buttons.setSpacing(10);
+
         Button button = new Button();
         button.setText("New simulation");
         button.setOnMouseClicked( k->{
@@ -256,10 +263,39 @@ public class SimulationBoard {
             this.worldConfiguration = new WorldConfiguration(percentageOfFoxes, percentageOfRabbits, 150, 150,
                     deathPropability, foxBirthPropability, rabbitBirthPropability);
             this.world = new World(worldConfiguration);
+            running = true;
             startSimulation(world, worldConfiguration);
 
         });
-        controlPanel.getChildren().add(button);
+        buttons.getChildren().add(button);
+
+        Button stopStartButton = new Button();
+        stopStartButton.setText("Stop simulation");
+        stopStartButton.setOnMouseClicked(k -> {
+            if(running) {
+                animationTimer.stop();
+                running = false;
+                stopStartButton.setText("Start simulation");
+            }
+            else {
+                stopStartButton.setText("Stop simulation");
+                animationTimer.start();
+                running = true;
+            }
+        });
+        buttons.getChildren().add(stopStartButton);
+
+        Button saveButton = new Button();
+        saveButton.setText("Save chart");
+        saveButton.setOnMouseClicked(k -> {
+            Stage saveStage = prepareSaveStage();
+            saveStage.show();
+        });
+        buttons.getChildren().add(saveButton);
+
+
+
+        controlPanel.getChildren().add(buttons);
 
         totalChart = createTotalChart();
         controlPanel.getChildren().add(totalChart);
