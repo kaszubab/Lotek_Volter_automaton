@@ -4,31 +4,27 @@ import sample.worldElements.animals.Animal;
 import sample.worldElements.animals.Fox;
 import sample.worldElements.animals.Rabbit;
 
+import java.sql.Time;
+import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class World {
 
-    private Vector leftLower;
-    private Vector rightUpper;
-    private int foxLifeExpectancy;
-    private List<Fox> foxList;
-    private List<Rabbit> rabbitList;
+    private final Vector leftLower;
+    private final Vector rightUpper;
+    private double foxDeathPropability;
+    private double huntPropability;
+    private double rabbitBirthPropability;
     private Map<Vector, Animal> map;
 
     public World(WorldConfiguration config) {
         leftLower = new Vector(0,0);
         rightUpper = new Vector(config.getWidth(), config.getHeight());
-        this.foxLifeExpectancy = config.getFoxLifeExpectancy();
-
-        this.foxList = new LinkedList<>();
-        this.rabbitList = new LinkedList<>();
-
+        this.foxDeathPropability = config.getFoxDeathPropability();
+        this.huntPropability = config.getFoxBirthPropability();
+        this.rabbitBirthPropability = config.getRabbitBirthPropability();
         this.map = new HashMap<>();
-        for( int i = 0; i < config.getWidth(); i++) {
-            for( int j = 0; j < config.getHeight(); j++) {
-                map.put(new Vector(i,j), null);
-            }
-        }
 
         Random random = new Random();
 
@@ -37,11 +33,9 @@ public class World {
             do {
                 foxPosition = new Vector(random.nextInt(config.getWidth()),
                                          random.nextInt(config.getHeight()));
-            } while (this.map.get(foxPosition) != null);
-
-            Fox newFox = new Fox(foxPosition, this.foxLifeExpectancy);
+            } while (this.map.getOrDefault(foxPosition, null) != null);
+            Fox newFox = new Fox(foxPosition);
             this.map.put(foxPosition, newFox);
-            this.foxList.add(newFox);
         }
 
         for(int i = 0; i < config.getInitialRabbitCount(); i++) {
@@ -49,95 +43,66 @@ public class World {
             do {
                 rabbitPosition = new Vector(random.nextInt(config.getWidth()),
                         random.nextInt(config.getHeight()));
-            } while (this.map.get(rabbitPosition) != null);
+            } while (this.map.getOrDefault(rabbitPosition, null) != null);
             Rabbit rabbit = new Rabbit(rabbitPosition);
             this.map.put(rabbitPosition, rabbit);
-            this.rabbitList.add(rabbit);
         }
     }
 
     public void run() {
+        Random rand = new Random();
+        rand.setSeed(System.currentTimeMillis());
 
-        Set<Rabbit> rabbitsToAdd = new HashSet<>();
-        Random random = new Random();
+        List<Vector> toDelete  = new LinkedList<>();
+        final List<Animal> toAdd = new LinkedList<>();
 
-        for (Rabbit rabbit : this.rabbitList) {
+        List<Animal> animals = new LinkedList<>(this.map.values()){};
 
-            List<Vector> viablePositions = getNotOccupiedPositions(rabbit.getPosition());
-
-            if (viablePositions.size() > 0) {
-                int randIndex = random.nextInt(viablePositions.size());
-                this.map.put(rabbit.getPosition(), null);
-                this.map.put(viablePositions.get(randIndex), rabbit);
-                rabbit.move(viablePositions.get(randIndex));
-                viablePositions.remove(randIndex);
+        animals.forEach( k ->{
+            if( k instanceof Fox) {
+                if (rand.nextDouble() > this.foxDeathPropability) {
+                    List<Vector> rabbits = getNearbyRabbits(k.getPosition());
+                    if (rabbits != null) {
+                        if(rand.nextDouble() < huntPropability) {
+                            Vector eatenRabbit = rabbits.get(rand.nextInt(rabbits.size()));
+                            this.map.put(eatenRabbit, new Fox(eatenRabbit));
+                        }
+                    } else {
+                        this.map.remove(k.getPosition());
+                    }
+                }
+                else {
+                    this.map.remove(k.getPosition());
+                }
             }
+        });
 
-            while (viablePositions.size() > 0) {
-                int randIndex = random.nextInt(viablePositions.size());
-                Rabbit newRabbit = new Rabbit(viablePositions.get(randIndex));
-                this.map.put(newRabbit.getPosition(), newRabbit);
-                rabbitsToAdd.add(newRabbit);
-                viablePositions.remove(randIndex);
+        animals = new LinkedList<>(this.map.values()){};
+
+        animals.forEach( k ->{
+            if( k instanceof Rabbit) {
+                List<Vector> emptyPositions = getNotOccupiedPositions(k.getPosition());
+                if (emptyPositions != null) {
+                    if (rand.nextDouble() < this.rabbitBirthPropability) {
+                        Vector newPosition = emptyPositions.get(rand.nextInt(emptyPositions.size()));
+                        this.map.put(newPosition, new Rabbit(newPosition));
+                    }
+
+                }
             }
+        });
 
+        animals = new LinkedList<>(this.map.values()){};
 
-        }
-
-        this.rabbitList.addAll(rabbitsToAdd);
-
-
-
-        Set<Rabbit> rabbitsToDelete = new HashSet<>();
-        Set<Fox> foxesToAdd = new HashSet<>();
-        Set<Fox> foxesToDelete = new HashSet<>();
-
-        System.out.println(this.foxList.size());
-
-        for(Fox fox : this.foxList) {
-
-            List<Vector> rabbits = getNearbyRabbits(fox.getPosition());
-
-            if (rabbits.size() > 0) {
-                //fox.eat();
-                int randIndex = random.nextInt(rabbits.size());
-                Fox newFox = new Fox(rabbits.get(randIndex), this.foxLifeExpectancy);
-                Rabbit rabbit = (Rabbit) this.map.get(newFox.getPosition());
-                this.map.put(newFox.getPosition(), newFox);
-                rabbitsToDelete.add(rabbit);
-                foxesToAdd.add(newFox);
+        animals.forEach( k ->{
+            List<Vector> emptyPositions = getNotOccupiedPositions(k.getPosition());
+            if (emptyPositions != null) {
+                Vector newPosition = emptyPositions.get(rand.nextInt(emptyPositions.size()));
+                this.map.remove(k.getPosition());
+                k.move(newPosition);
+                this.map.put(newPosition, k);
             }
-
-
-
-            if (!fox.surviveDay()) {
-                this.map.put(fox.getPosition(), null);
-                foxesToDelete.add(fox);
-                continue;
-            }
-
-            List<Vector> viablePositions = getNotOccupiedPositions(fox.getPosition());
-
-            if (viablePositions.size() > 0) {
-                int randIndex = random.nextInt(viablePositions.size());
-                this.map.put(fox.getPosition(), null);
-                this.map.put(viablePositions.get(randIndex), fox);
-                fox.move(viablePositions.get(randIndex));
-            }
-
-
-        }
-        System.out.println(foxesToDelete.size());
-
-        this.foxList.removeAll(foxesToDelete);
-
-        System.out.println(this.foxList.size());
-        this.rabbitList.removeAll(rabbitsToDelete);
-        System.out.println(foxesToAdd.size());
-
-        this.foxList.addAll(foxesToAdd);
-
-        System.out.println(this.foxList.size());
+        });
 
     }
 
@@ -149,13 +114,18 @@ public class World {
             for(int j = -1; j < 2; j++) {
                 Vector newPosition = new Vector(position.getX() + i, position.getY() + j);
                 if(leftLower.precedes(newPosition) && rightUpper.follows(newPosition) &&
-                        this.map.get(newPosition) == null) {
+                        !this.map.containsKey(newPosition)) {
                     freePositions.add(newPosition);
                 }
             }
         }
 
-        return freePositions;
+        if (freePositions.size() > 0) {
+            return freePositions;
+        }
+        else {
+            return null;
+        }
     }
 
     private List<Vector> getNearbyRabbits(Vector position) {
@@ -165,21 +135,23 @@ public class World {
             for(int j = -1; j < 2; j++) {
                 Vector newPosition = new Vector(position.getX() + i, position.getY() + j);
                 if(leftLower.precedes(newPosition) && rightUpper.follows(newPosition) &&
-                        this.map.get(newPosition) instanceof Rabbit) {
+                        this.map.getOrDefault(newPosition, null) instanceof Rabbit) {
                     nearbyRabbits.add(newPosition);
                 }
             }
         }
 
-        return nearbyRabbits;
+        if (nearbyRabbits.size() > 0)
+            return nearbyRabbits;
+        else
+            return null;
+    }
+
+    public List<Animal> getAnimalList() {
+        final List<Animal> animals = new LinkedList<>();
+        animals.addAll(this.map.values());
+        return animals;
     }
 
 
-    public List<Fox> getFoxList() {
-        return foxList;
-    }
-
-    public List<Rabbit> getRabbitList() {
-        return rabbitList;
-    }
 }

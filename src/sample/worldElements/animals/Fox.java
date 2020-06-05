@@ -7,13 +7,9 @@ import java.util.Objects;
 public class Fox implements Animal{
 
     private Vector position;
-    private int currentEnergy;
-    private int maxEnergy;
 
-    public Fox(Vector position, int lifeExpectancy) {
+    public Fox(Vector position) {
         this.position = position;
-        this.currentEnergy = lifeExpectancy;
-        this.maxEnergy = lifeExpectancy;
     }
 
     @Override
@@ -24,15 +20,6 @@ public class Fox implements Animal{
     @Override
     public Vector getPosition() {
         return position;
-    }
-
-    public boolean surviveDay() {
-        this.currentEnergy--;
-        return this.currentEnergy >= 0;
-    }
-
-    public void eat() {
-        this.currentEnergy = this.maxEnergy;
     }
 
     @Override
