@@ -1,24 +1,18 @@
 package sample.worldElements;
 
-public class WorldConfiguration {
+import sample.SimulationConfiguration;
 
-    private int initialFoxCount;
-    private int initialRabbitCount;
-    private int width;
-    private int height;
-    private double foxDeathPropability;
-    private double foxBirthPropability;
-    private double rabbitBirthPropability;
+public class WorldConfiguration extends SimulationConfiguration {
 
-
-    public WorldConfiguration(String filename)
-    {
-        // TODO
-    }
+    private final int width;
+    private final int height;
+    private final int initialFoxCount;
+    private final int initialRabbitCount;
 
     public WorldConfiguration(double foxPercentage, double rabbitPercentage, int width, int height,
                               double foxDeathPropability, double foxBirthPropability, double rabbitBirthPropability) {
 
+        super(foxDeathPropability, foxBirthPropability, rabbitBirthPropability);
         if (width < 0 || width > 200)
             throw new IllegalArgumentException("Width must be between 0 and 200");
         this.width = width;
@@ -27,21 +21,8 @@ public class WorldConfiguration {
             throw new IllegalArgumentException("Height must be between 0 and 200");
         this.height = height;
 
-        if (foxBirthPropability < 0 || foxBirthPropability > 1)
-            throw new IllegalArgumentException("Fox birth propability must be between 0 and 1");
-        this.foxBirthPropability = foxBirthPropability;
-
-        if (rabbitBirthPropability < 0 || rabbitBirthPropability > 1)
-            throw new IllegalArgumentException("Fox birth propability must be between 0 and 1");
-        this.rabbitBirthPropability = rabbitBirthPropability;
-
-        if (foxDeathPropability < 0 || foxDeathPropability > 1)
-            throw new IllegalArgumentException("Fox death propability must be between 0 and 1");
-        this.foxDeathPropability = foxDeathPropability;
-
         if (foxPercentage < 0 || foxPercentage > 1)
             throw new IllegalArgumentException("Fox percentage  must be between 0 and 1");
-        System.out.println(foxPercentage);
         this.initialFoxCount = (int) Math.floor(width * height * foxPercentage);
 
         if (rabbitPercentage < 0 || rabbitPercentage > 1)
@@ -68,14 +49,14 @@ public class WorldConfiguration {
     }
 
     public double getFoxBirthPropability() {
-        return foxBirthPropability;
+        return super.getFoxBirthPropability();
     }
 
     public double getFoxDeathPropability() {
-        return foxDeathPropability;
+        return super.getFoxDeathPropability();
     }
 
     public double getRabbitBirthPropability() {
-        return rabbitBirthPropability;
+        return super.getRabbitBirthPropability();
     }
 }

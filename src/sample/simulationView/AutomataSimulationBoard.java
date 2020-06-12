@@ -1,53 +1,42 @@
-package sample;
+package sample.simulationView;
 
 import javafx.animation.AnimationTimer;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import sample.worldElements.Vector;
 import sample.worldElements.World;
 import sample.worldElements.WorldConfiguration;
 import sample.worldElements.animals.Animal;
 import sample.worldElements.animals.Fox;
 import sample.worldElements.animals.Rabbit;
 
-import javax.imageio.ImageIO;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class SimulationBoard {
+public class AutomataSimulationBoard {
 
     private World world;
     private Pane root;
     private Canvas canvas;
     private WorldConfiguration worldConfiguration;
-    private AnimationTimer animationTimer;
+    private AnimationTimer animationTimer = null;
+
     private int animationFrame;
     private boolean running;
     private int simulationDay = 0;
-    private LineChart<Number, Number> totalChart;
+
+    private TotalChart totalChart;
     private VBox controlPanel;
 
     private XYChart.Series<Number, Number> rabbitSeries = new XYChart.Series<>();
@@ -55,7 +44,7 @@ public class SimulationBoard {
 
 
 
-    public SimulationBoard() {
+    public AutomataSimulationBoard() {
         this.world = null;
         this.worldConfiguration = null;
         this.running = false;
@@ -70,7 +59,7 @@ public class SimulationBoard {
         root = hBox;
     }
 
-    public Pane createCanvas() {
+    private Pane createCanvas() {
         VBox vBox = new VBox();
         this.canvas = new Canvas();
         canvas.setHeight(800);
@@ -80,96 +69,16 @@ public class SimulationBoard {
         return vBox;
     }
 
-    private LineChart<Number, Number> createTotalChart() {
-        final NumberAxis xAxis = new NumberAxis();
-        final NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Day of simulation");
-        yAxis.setLabel("Quantity");
-
-        final LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.setTitle("Predator Prey Simulation");
-        lineChart.getData().add(rabbitSeries);
-        lineChart.getData().add(foxSeries);
-        lineChart.setMaxWidth(400);
-        lineChart.setMaxHeight(300);
-
-        lineChart.setOnMouseClicked( k-> {
-            Stage stage = new Stage();
-            Pane newRoot = new StackPane();
-
-            totalChart.setMinWidth(1000);
-            totalChart.setMinHeight(800);
-
-            EventHandler<? super javafx.scene.input.MouseEvent> oldHandler = totalChart.getOnMouseClicked();
-
-            totalChart.setOnMouseClicked( event-> {
-                if(!running) {
-                    Stage saveStage = prepareSaveStage();
-                    saveStage.show();
-                }
-            });
-            newRoot.getChildren().add(totalChart);
-            stage.setScene(new Scene(newRoot));
-
-
-            stage.setOnCloseRequest( action ->{
-                totalChart.setMinHeight(300);
-                totalChart.setMinWidth(400);
-                totalChart.setMaxHeight(300);
-                totalChart.setMaxWidth(400);
-                controlPanel.getChildren().add(totalChart);
-                totalChart.setOnMouseClicked(oldHandler);
-                stage.close();
-            });
-            stage.show();
-        });
-
-        lineChart.setAnimated(false);
-
-        return lineChart;
-    }
-
-    private Stage prepareSaveStage() {
-        Stage saveStage = new Stage();
-        saveStage.setTitle("Save to png");
-        VBox vBox = new VBox();
-        vBox.setAlignment(Pos.CENTER);
-        vBox.setMinHeight(300);
-        vBox.setMinWidth(400);
-        vBox.setPadding(new Insets(5, 5, 5, 5));
-        vBox.setSpacing(10);
-        Text text = new Text();
-        text.setText("Enter a filename (saves to Png)");
-        vBox.getChildren().add(text);
-
-        TextField textField = new TextField();
-        textField.setPromptText("Filename");
-        vBox.getChildren().add(textField);
-
-        Button button = new Button();
-        button.setText("Save");
-        button.setOnMouseClicked(k ->{
-            String filename = textField.getCharacters().toString() + ".png";
-            WritableImage img = totalChart.snapshot(null, null);
-            try {
-                ImageIO.write(SwingFXUtils.fromFXImage(img, null), "png", new File(filename));
-            }
-            catch (IOException e) {
-                text.setText("Wrong filename");
-            }
-        });
-        vBox.getChildren().add(button);
-        saveStage.setScene(new Scene(vBox));
-        return saveStage;
-    }
-
-    public void startSimulation(World world, WorldConfiguration worldConfiguration) {
+    private void startSimulation(World world, WorldConfiguration worldConfiguration) {
         this.world = world;
         this.worldConfiguration = worldConfiguration;
         int cellWidth = 800 / worldConfiguration.getWidth();
         int cellHeight = 800 / worldConfiguration.getHeight();
 
         drawMap(cellWidth, cellHeight);
+        if (this.animationTimer != null) {
+            this.animationTimer.stop();
+        }
         this.animationTimer = new AnimationTimer() {
             private long lastUpdate = 0;
 
@@ -188,7 +97,7 @@ public class SimulationBoard {
     }
 
 
-    public void drawMap(double cellWidth, double cellHeight) {
+    private void drawMap(double cellWidth, double cellHeight) {
         GraphicsContext gc = this.canvas.getGraphicsContext2D();
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
         gc.setFill(Color.LAVENDER);
@@ -215,8 +124,6 @@ public class SimulationBoard {
 
         rabbitSeries.getData().add(new XYChart.Data<Number, Number>(simulationDay, rabbitCount));
         foxSeries.getData().add(new XYChart.Data<Number, Number>(simulationDay, foxCount));
-
-
 
     }
 
@@ -259,6 +166,9 @@ public class SimulationBoard {
             double foxBirthPropability = Double.parseDouble(( (TextField) controlPanel.getChildren().get(9)).getCharacters().toString());
             double rabbitBirthPropability = Double.parseDouble(( (TextField) controlPanel.getChildren().get(11)).getCharacters().toString());
 
+            rabbitSeries.getData().removeIf(v -> 1==1);
+            foxSeries.getData().removeIf(v -> 1==1);
+            simulationDay = 0;
             animationFrame = step;
             this.worldConfiguration = new WorldConfiguration(percentageOfFoxes, percentageOfRabbits, 150, 150,
                     deathPropability, foxBirthPropability, rabbitBirthPropability);
@@ -288,17 +198,20 @@ public class SimulationBoard {
         Button saveButton = new Button();
         saveButton.setText("Save chart");
         saveButton.setOnMouseClicked(k -> {
-            Stage saveStage = prepareSaveStage();
+            Stage saveStage = totalChart.prepareSaveStage();
             saveStage.show();
         });
         buttons.getChildren().add(saveButton);
 
 
-
         controlPanel.getChildren().add(buttons);
 
-        totalChart = createTotalChart();
-        controlPanel.getChildren().add(totalChart);
+        List<XYChart.Series<Number, Number>> seriesList = new LinkedList<>();
+        seriesList.add(rabbitSeries);
+        seriesList.add(foxSeries);
+
+        this.totalChart = new TotalChart(seriesList, 400, 300, controlPanel);
+        controlPanel.getChildren().add(this.totalChart.getLineChart());
 
         this.controlPanel  = controlPanel;
     }

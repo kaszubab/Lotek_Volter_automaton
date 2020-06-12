@@ -5,15 +5,16 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import sample.worldElements.World;
-import sample.worldElements.WorldConfiguration;
+import sample.simulationView.AutomataSimulationBoard;
+import sample.simulationView.DESimulationBoard;
 
 public class Main extends Application {
 
@@ -31,7 +32,9 @@ public class Main extends Application {
         Text text = new Text();
         text.setText("Welcome to the Predator-prey simulator");
         text.setTextAlignment(TextAlignment.CENTER);
+        text.setFont(Font.font("arial", 30));
         centralPanel.getChildren().add(text);
+        text.setFill(Color.RED);
 
         text = new Text();
         text.setText("Choose the mode of simulation");
@@ -44,7 +47,18 @@ public class Main extends Application {
         centralPanel.getChildren().add(automatonSimulation);
 
         automatonSimulation.setOnMouseClicked( k->{
-            SimulationBoard view = new SimulationBoard();
+            AutomataSimulationBoard view = new AutomataSimulationBoard();
+            root = view.getVisualization();
+            primaryStage.setScene(new Scene(root));
+        });
+
+        Button DESimulation = new Button();
+        DESimulation.setAlignment(Pos.CENTER);
+        DESimulation.setText("DESimulation simulation");
+        centralPanel.getChildren().add(DESimulation);
+
+        DESimulation.setOnMouseClicked( k->{
+            DESimulationBoard view = new DESimulationBoard();
             root = view.getVisualization();
             primaryStage.setScene(new Scene(root));
         });
